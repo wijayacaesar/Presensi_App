@@ -3,161 +3,190 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Aplikasi Presensi</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
-        background-color: #f5f5f5;
-      }
-      .container {
-        background: white;
-        padding: 30px;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      }
-      h1 {
-        color: #333;
-        text-align: center;
-        margin-bottom: 30px;
-      }
-      .form-group {
-        margin-bottom: 20px;
-      }
-      label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
-      }
-      input[type="text"] {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        box-sizing: border-box;
-      }
-      button {
-        background-color: #007bff;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        margin-right: 10px;
-      }
-      button:hover {
-        background-color: #0056b3;
-      }
-      .clear-btn {
-        background-color: #dc3545;
-      }
-      .clear-btn:hover {
-        background-color: #c82333;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 30px;
-      }
-      th,
-      td {
-        padding: 12px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
-      }
-      th {
-        background-color: #f8f9fa;
-        font-weight: bold;
-      }
-      .no-data {
-        text-align: center;
-        color: #666;
-        font-style: italic;
-        padding: 20px;
-      }
-      tr:hover {
-        background-color: #f8f9fa;
-      }
-      .stats {
-        margin-top: 20px;
-        padding: 15px;
-        background-color: #e9ecef;
-        border-radius: 5px;
-        text-align: center;
-      }
-      @media (max-width: 600px) {
-        body {
-          padding: 10px;
-        }
-        .container {
-          padding: 20px;
-        }
-        table {
-          font-size: 14px;
-        }
-        th,
-        td {
-          padding: 8px;
-        }
-      }
-    </style>
+    <title>{{ settings.title }}</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>"
+    />
   </head>
   <body>
     <div class="container">
-      <h1>📋 Aplikasi Presensi</h1>
+      <!-- Header Section -->
+      <header class="header">
+        <h1>{{ settings.title }}</h1>
+        <p class="subtitle">{{ settings.organization }}</p>
 
-      <form method="POST" action="/presensi">
-        <div class="form-group">
-          <label for="nama">Nama Lengkap:</label>
-          <input
-            type="text"
-            id="nama"
-            name="nama"
-            required
-            placeholder="Masukkan nama lengkap Anda"
-          />
+        <div class="current-time">
+          <div class="time-display">--:--:--</div>
+          <div class="date-display">Loading...</div>
         </div>
-        <button type="submit">✅ Absen Sekarang</button>
-        <a href="/clear"
-          ><button type="button" class="clear-btn">
-            🗑️ Hapus Semua Data
-          </button></a
-        >
-      </form>
+      </header>
 
-      {% if data %}
-      <div class="stats">
-        <strong>Total Presensi: {{ data|length }} orang</strong>
+      <!-- Flash Messages -->
+      <div class="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %} {% if
+        messages %} {% for category, message in messages %}
+        <div class="flash-message flash-{{ category }}">
+          {% if category == 'success' %}
+          <span>✅</span>
+          {% elif category == 'error' %}
+          <span>❌</span>
+          {% elif category == 'warning' %}
+          <span>⚠️</span>
+          {% else %}
+          <span>📢</span>
+          {% endif %}
+          <span>{{ message }}</span>
+        </div>
+        {% endfor %} {% endif %} {% endwith %}
       </div>
-      {% endif %}
 
-      <h2>📊 Data Presensi</h2>
-      {% if data %}
-      <table>
-        <thead>
-          <tr>
-            <th>No</th>
-            <th>Nama</th>
-            <th>Waktu Presensi</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in data %}
-          <tr>
-            <td>{{ loop.index }}</td>
-            <td>{{ item.nama }}</td>
-            <td>{{ item.waktu }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <div class="no-data">
-        Belum ada data presensi. Silakan absen terlebih dahulu.
+      <!-- Statistics Cards -->
+      <div class="stats-grid">
+        <div class="stat-card stat-total">
+          <div class="stat-number">{{ stats.total }}</div>
+          <div class="stat-label">Total Presensi</div>
+        </div>
+        <div class="stat-card stat-today">
+          <div class="stat-number">{{ stats.today }}</div>
+          <div class="stat-label">Hari Ini</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ stats.this_week }}</div>
+          <div class="stat-label">Minggu Ini</div>
+        </div>
       </div>
-      {% endif %}
+
+      <!-- Main Content -->
+      <div class="main-content">
+        <!-- Form Section -->
+        <div class="form-section">
+          <h2 class="form-title">
+            <span>📝</span>
+            Input Presensi
+          </h2>
+
+          <form method="POST" action="/presensi">
+            <div class="form-group">
+              <label for="nama" class="form-label">Nama Lengkap *</label>
+              <input
+                type="text"
+                id="nama"
+                name="nama"
+                class="form-input"
+                required
+                placeholder="Masukkan nama lengkap"
+                autocomplete="name"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="keterangan" class="form-label"
+                >Keterangan (Opsional)</label
+              >
+              <input
+                type="text"
+                id="keterangan"
+                name="keterangan"
+                class="form-input"
+                placeholder="Keterangan tambahan"
+                maxlength="100"
+              />
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+              <span>✅</span>
+              Absen Sekarang
+            </button>
+          </form>
+        </div>
+
+        <!-- Data Section -->
+        <div class="data-section">
+          <div class="data-header">
+            <h2 class="data-title">
+              <span>📊</span>
+              Data Presensi
+            </h2>
+
+            <div class="action-buttons">
+              <button onclick="exportData()" class="btn btn-secondary">
+                <span>📥</span>
+                Export
+              </button>
+              <a href="/clear" class="btn btn-danger">
+                <span>🗑️</span>
+                Hapus Semua
+              </a>
+            </div>
+          </div>
+
+          {% if data %}
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama</th>
+                  <th>Waktu</th>
+                  <th>Tanggal</th>
+                  <th>Status</th>
+                  <th>Keterangan</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in data %}
+                <tr class="fade-in">
+                  <td>{{ loop.index }}</td>
+                  <td><strong>{{ item.nama }}</strong></td>
+                  <td>{{ item.waktu }}</td>
+                  <td>{{ item.date }}</td>
+                  <td>
+                    <span
+                      class="status-badge status-{{ item.status.lower().replace(' ', '-') }}"
+                    >
+                      {{ item.status }}
+                    </span>
+                  </td>
+                  <td>{{ item.keterangan or '-' }}</td>
+                  <td>
+                    <a
+                      href="/delete/{{ item.id }}"
+                      class="btn btn-danger"
+                      style="padding: 6px 12px; font-size: 0.8rem"
+                    >
+                      🗑️
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <div class="empty-state-text">Belum ada data presensi</div>
+            <div class="empty-state-subtext">
+              Silakan lakukan presensi terlebih dahulu
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
     </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
   </body>
 </html>
