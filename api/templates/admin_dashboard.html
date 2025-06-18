@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard - {{ settings.title }}</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/dark-style.css') }}"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Admin Header -->
+      <div class="admin-header">
+        <div class="admin-nav">
+          <div>
+            <h1 class="admin-title">🛡️ Admin Dashboard</h1>
+            <p style="color: var(--text-secondary); margin-top: 5px">
+              Welcome, {{ admin_username.title() }}!
+            </p>
+          </div>
+          <div class="admin-actions">
+            <a href="{{ url_for('home') }}" class="btn btn-secondary">
+              <span>🏠</span>
+              Home
+            </a>
+            <a href="{{ url_for('admin_logout') }}" class="btn btn-danger">
+              <span>🚪</span>
+              Logout
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Flash Messages -->
+      <div class="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %} {% if
+        messages %} {% for category, message in messages %}
+        <div class="flash-message flash-{{ category }}">
+          {% if category == 'success' %}
+          <span>✅</span>
+          {% elif category == 'error' %}
+          <span>❌</span>
+          {% elif category == 'warning' %}
+          <span>⚠️</span>
+          {% else %}
+          <span>📢</span>
+          {% endif %}
+          <span>{{ message }}</span>
+        </div>
+        {% endfor %} {% endif %} {% endwith %}
+      </div>
+
+      <!-- Advanced Statistics -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number">{{ data|length }}</div>
+          <div class="stat-label">Total Records</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ status_stats['Tepat Waktu'] }}</div>
+          <div class="stat-label">On Time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ status_stats['Terlambat'] }}</div>
+          <div class="stat-label">Late</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ status_stats['Datang Awal'] }}</div>
+          <div class="stat-label">Early</div>
+        </div>
+      </div>
+
+      <!-- Data Management -->
+      <div class="data-section">
+        <div class="data-header">
+          <h2 class="data-title">
+            <span>📊</span>
+            Attendance Records Management
+          </h2>
+
+          <div class="action-buttons">
+            <button onclick="exportData()" class="btn btn-secondary">
+              <span>📥</span>
+              Export All Data
+            </button>
+            <a
+              href="{{ url_for('clear_all_data') }}"
+              class="btn btn-danger"
+              onclick="return confirm('Are you sure you want to delete ALL attendance records? This action cannot be undone!')"
+            >
+              <span>🗑️</span>
+              Clear All Data
+            </a>
+          </div>
+        </div>
+
+        {% if data %}
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Time</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Location</th>
+                <th>Notes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in data %}
+              <tr class="fade-in">
+                <td><strong>#{{ item.id }}</strong></td>
+                <td><strong>{{ item.nama }}</strong></td>
+                <td>{{ item.waktu }}</td>
+                <td>{{ item.date }}</td>
+                <td>
+                  <span
+                    class="status-badge status-{{ item.status.lower().replace(' ', '-') }}"
+                  >
+                    {{ item.status_icon }} {{ item.status }}
+                  </span>
+                </td>
+                <td>{{ item.lokasi }}</td>
+                <td>{{ item.keterangan }}</td>
+                <td>
+                  <a
+                    href="{{ url_for('delete_record', record_id=item.id) }}"
+                    class="btn btn-danger"
+                    style="padding: 8px 15px; font-size: 0.9rem"
+                    onclick="return confirm('Delete attendance record for {{ item.nama }}?')"
+                  >
+                    🗑️ Delete
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">📋</div>
+          <div class="empty-state-text">No attendance records found</div>
+          <div class="empty-state-subtext">
+            Attendance data will appear here once users start checking in
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Daily Statistics Chart -->
+      <div class="data-section" style="margin-top: 30px">
+        <h2 class="data-title">
+          <span>📈</span>
+          Weekly Attendance Overview
+        </h2>
+
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+          "
+        >
+          {% for day_stat in daily_stats %}
+          <div class="stat-card" style="padding: 20px">
+            <div class="stat-number" style="font-size: 2rem">
+              {{ day_stat.count }}
+            </div>
+            <div class="stat-label" style="font-size: 0.8rem">
+              {{ day_stat.day[:3] }}
+            </div>
+            <div
+              style="
+                font-size: 0.7rem;
+                color: var(--text-muted);
+                margin-top: 5px;
+              "
+            >
+              {{ day_stat.date }}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Export functionality
+      function exportData() {
+        fetch("/export")
+          .then((response) => response.json())
+          .then((data) => {
+            const blob = new Blob([JSON.stringify(data, null, 2)], {
+              type: "application/json",
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `attendance-data-${
+              new Date().toISOString().split("T")[0]
+            }.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // Show success message
+            const flashContainer = document.querySelector(".flash-messages");
+            const successMsg = document.createElement("div");
+            successMsg.className = "flash-message flash-success";
+            successMsg.innerHTML =
+              "<span>✅</span><span>Data exported successfully!</span>";
+            flashContainer.appendChild(successMsg);
+
+            setTimeout(() => successMsg.remove(), 5000);
+          })
+          .catch((error) => {
+            console.error("Export failed:", error);
+            alert("Failed to export data!");
+          });
+      }
+
+      // Auto-refresh data every 30 seconds
+      setInterval(() => {
+        location.reload();
+      }, 30000);
+    </script>
+  </body>
+</html>

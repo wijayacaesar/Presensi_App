@@ -6,17 +6,17 @@
     <title>{{ settings.title }}</title>
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}"
+      href="{{ url_for('static', filename='css/dark-style.css') }}"
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <link
       rel="icon"
-      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>"
     />
   </head>
   <body>
@@ -24,12 +24,34 @@
       <!-- Header Section -->
       <header class="header">
         <h1>{{ settings.title }}</h1>
-        <p class="subtitle">{{ settings.organization }}</p>
+        <p class="subtitle">
+          {{ settings.organization }} • v{{ settings.version }}
+        </p>
 
         <div class="current-time">
           <div class="time-display">--:--:--</div>
           <div class="date-display">Loading...</div>
         </div>
+
+        {% if is_admin %}
+        <div style="margin-top: 20px">
+          <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+            <span>🛡️</span>
+            Admin Dashboard
+          </a>
+          <a href="{{ url_for('admin_logout') }}" class="btn btn-danger">
+            <span>🚪</span>
+            Logout
+          </a>
+        </div>
+        {% else %}
+        <div style="margin-top: 20px">
+          <a href="{{ url_for('admin_login') }}" class="btn btn-secondary">
+            <span>🔐</span>
+            Admin Login
+          </a>
+        </div>
+        {% endif %}
       </header>
 
       <!-- Flash Messages -->
@@ -53,11 +75,11 @@
 
       <!-- Statistics Cards -->
       <div class="stats-grid">
-        <div class="stat-card stat-total">
+        <div class="stat-card">
           <div class="stat-number">{{ stats.total }}</div>
           <div class="stat-label">Total Presensi</div>
         </div>
-        <div class="stat-card stat-today">
+        <div class="stat-card">
           <div class="stat-number">{{ stats.today }}</div>
           <div class="stat-label">Hari Ini</div>
         </div>
@@ -65,50 +87,78 @@
           <div class="stat-number">{{ stats.this_week }}</div>
           <div class="stat-label">Minggu Ini</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ stats.this_month }}</div>
+          <div class="stat-label">Bulan Ini</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ stats.on_time }}</div>
+          <div class="stat-label">Tepat Waktu</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ stats.late }}</div>
+          <div class="stat-label">Terlambat</div>
+        </div>
       </div>
 
       <!-- Main Content -->
       <div class="main-content">
         <!-- Form Section -->
         <div class="form-section">
-          <h2 class="form-title">
-            <span>📝</span>
-            Input Presensi
-          </h2>
+          <div class="form-content">
+            <h2 class="form-title">
+              <span>🚀</span>
+              Check-In Presensi
+            </h2>
 
-          <form method="POST" action="/presensi">
-            <div class="form-group">
-              <label for="nama" class="form-label">Nama Lengkap *</label>
-              <input
-                type="text"
-                id="nama"
-                name="nama"
-                class="form-input"
-                required
-                placeholder="Masukkan nama lengkap"
-                autocomplete="name"
-              />
-            </div>
+            <form method="POST" action="/presensi" id="attendanceForm">
+              <div class="form-group">
+                <label for="nama" class="form-label">Nama Lengkap *</label>
+                <input
+                  type="text"
+                  id="nama"
+                  name="nama"
+                  class="form-input"
+                  required
+                  placeholder="Masukkan nama lengkap Anda"
+                  autocomplete="name"
+                  minlength="2"
+                  maxlength="50"
+                />
+              </div>
 
-            <div class="form-group">
-              <label for="keterangan" class="form-label"
-                >Keterangan (Opsional)</label
-              >
-              <input
-                type="text"
-                id="keterangan"
-                name="keterangan"
-                class="form-input"
-                placeholder="Keterangan tambahan"
-                maxlength="100"
-              />
-            </div>
+              <div class="form-group">
+                <label for="lokasi" class="form-label">Lokasi</label>
+                <select id="lokasi" name="lokasi" class="form-input">
+                  <option value="Kantor">🏢 Kantor Pusat</option>
+                  <option value="WFH">🏠 Work From Home</option>
+                  <option value="Cabang A">🏪 Kantor Cabang A</option>
+                  <option value="Cabang B">🏪 Kantor Cabang B</option>
+                  <option value="Client Site">🏗️ Client Site</option>
+                  <option value="Lainnya">📍 Lainnya</option>
+                </select>
+              </div>
 
-            <button type="submit" class="btn btn-primary">
-              <span>✅</span>
-              Absen Sekarang
-            </button>
-          </form>
+              <div class="form-group">
+                <label for="keterangan" class="form-label"
+                  >Keterangan (Opsional)</label
+                >
+                <input
+                  type="text"
+                  id="keterangan"
+                  name="keterangan"
+                  class="form-input"
+                  placeholder="Catatan tambahan (meeting, project, dll)"
+                  maxlength="100"
+                />
+              </div>
+
+              <button type="submit" class="btn btn-primary" id="submitBtn">
+                <span>🚀</span>
+                Check-In Sekarang
+              </button>
+            </form>
+          </div>
         </div>
 
         <!-- Data Section -->
@@ -116,7 +166,7 @@
           <div class="data-header">
             <h2 class="data-title">
               <span>📊</span>
-              Data Presensi
+              Live Attendance Data
             </h2>
 
             <div class="action-buttons">
@@ -124,10 +174,20 @@
                 <span>📥</span>
                 Export
               </button>
-              <a href="/clear" class="btn btn-danger">
+              <button onclick="refreshData()" class="btn btn-secondary">
+                <span>🔄</span>
+                Refresh
+              </button>
+              {% if is_admin %}
+              <a
+                href="{{ url_for('clear_all_data') }}"
+                class="btn btn-danger"
+                onclick="return confirm('Yakin ingin menghapus SEMUA data presensi?')"
+              >
                 <span>🗑️</span>
-                Hapus Semua
+                Clear All
               </a>
+              {% endif %}
             </div>
           </div>
 
@@ -141,14 +201,17 @@
                   <th>Waktu</th>
                   <th>Tanggal</th>
                   <th>Status</th>
+                  <th>Lokasi</th>
                   <th>Keterangan</th>
-                  <th>Aksi</th>
+                  {% if is_admin %}
+                  <th>Actions</th>
+                  {% endif %}
                 </tr>
               </thead>
               <tbody>
                 {% for item in data %}
                 <tr class="fade-in">
-                  <td>{{ loop.index }}</td>
+                  <td><strong>#{{ loop.index }}</strong></td>
                   <td><strong>{{ item.nama }}</strong></td>
                   <td>{{ item.waktu }}</td>
                   <td>{{ item.date }}</td>
@@ -156,19 +219,23 @@
                     <span
                       class="status-badge status-{{ item.status.lower().replace(' ', '-') }}"
                     >
-                      {{ item.status }}
+                      {{ item.status_icon }} {{ item.status }}
                     </span>
                   </td>
-                  <td>{{ item.keterangan or '-' }}</td>
+                  <td>{{ item.lokasi }}</td>
+                  <td>{{ item.keterangan }}</td>
+                  {% if is_admin %}
                   <td>
                     <a
-                      href="/delete/{{ item.id }}"
+                      href="{{ url_for('delete_record', record_id=item.id) }}"
                       class="btn btn-danger"
                       style="padding: 6px 12px; font-size: 0.8rem"
+                      onclick="return confirm('Hapus data presensi {{ item.nama }}?')"
                     >
                       🗑️
                     </a>
                   </td>
+                  {% endif %}
                 </tr>
                 {% endfor %}
               </tbody>
@@ -176,10 +243,10 @@
           </div>
           {% else %}
           <div class="empty-state">
-            <div class="empty-state-icon">📋</div>
+            <div class="empty-state-icon">🚀</div>
             <div class="empty-state-text">Belum ada data presensi</div>
             <div class="empty-state-subtext">
-              Silakan lakukan presensi terlebih dahulu
+              Mulai check-in untuk melihat data presensi di sini
             </div>
           </div>
           {% endif %}
@@ -187,6 +254,6 @@
       </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dark-app.js') }}"></script>
   </body>
 </html>

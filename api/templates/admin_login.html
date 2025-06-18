@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Login - {{ settings.title }}</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/dark-style.css') }}"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Flash Messages -->
+      <div class="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %} {% if
+        messages %} {% for category, message in messages %}
+        <div class="flash-message flash-{{ category }}">
+          {% if category == 'success' %}
+          <span>✅</span>
+          {% elif category == 'error' %}
+          <span>❌</span>
+          {% elif category == 'warning' %}
+          <span>⚠️</span>
+          {% else %}
+          <span>📢</span>
+          {% endif %}
+          <span>{{ message }}</span>
+        </div>
+        {% endfor %} {% endif %} {% endwith %}
+      </div>
+
+      <div class="login-container">
+        <h1 class="login-title">🔐 Admin Login</h1>
+
+        <form method="POST">
+          <div class="form-group">
+            <label for="username" class="form-label">Username</label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              class="form-input"
+              required
+              placeholder="Enter admin username"
+              autocomplete="username"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="password" class="form-label">Password</label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              class="form-input"
+              required
+              placeholder="Enter admin password"
+              autocomplete="current-password"
+            />
+          </div>
+
+          <button
+            type="submit"
+            class="btn btn-primary"
+            style="width: 100%; margin-bottom: 20px"
+          >
+            <span>🚀</span>
+            Login
+          </button>
+        </form>
+
+        <div style="text-align: center">
+          <a href="{{ url_for('home') }}" class="btn btn-secondary">
+            <span>🏠</span>
+            Kembali ke Home
+          </a>
+        </div>
+
+        <div
+          style="
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 15px;
+            text-align: center;
+          "
+        >
+          <p
+            style="
+              color: var(--text-secondary);
+              font-size: 0.9rem;
+              margin-bottom: 10px;
+            "
+          >
+            <strong>Demo Credentials:</strong>
+          </p>
+          <p
+            style="
+              color: var(--neon-blue);
+              font-family: 'JetBrains Mono', monospace;
+            "
+          >
+            Username: <strong>admin</strong> | Password:
+            <strong>admin123</strong><br />
+            Username: <strong>supervisor</strong> | Password:
+            <strong>super456</strong>
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
