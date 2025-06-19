@@ -6,19 +6,20 @@ import secrets
 import os
 from functools import wraps
 
-app = Flask(__name__, template_folder='templates', static_folder='../static')
+# FIX: Path template yang benar
+app = Flask(__name__, template_folder='../templates', static_folder='../static')
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
 # Timezone Indonesia
 WIB = pytz.timezone('Asia/Jakarta')
 
-# Admin credentials (dalam production gunakan database)
+# Admin credentials
 ADMIN_CREDENTIALS = {
     'admin': hashlib.sha256('admin123'.encode()).hexdigest(),
     'supervisor': hashlib.sha256('super456'.encode()).hexdigest()
 }
 
-# Data storage dengan struktur lengkap
+# Data storage
 presensi_data = []
 app_settings = {
     'title': 'Sistem Presensi Digital',
@@ -33,7 +34,6 @@ app_settings = {
 }
 
 def admin_required(f):
-    """Decorator untuk route yang memerlukan admin access"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'admin_logged_in' not in session:
@@ -43,11 +43,9 @@ def admin_required(f):
     return decorated_function
 
 def get_attendance_status(current_time):
-    """Menentukan status kehadiran berdasarkan waktu"""
     hour = current_time.hour
     minute = current_time.minute
     
-    # Convert work times to minutes for easier comparison
     work_start = 8 * 60  # 08:00 in minutes
     late_threshold = 8 * 60 + 15  # 08:15 in minutes
     current_minutes = hour * 60 + minute
@@ -61,10 +59,8 @@ def get_attendance_status(current_time):
 
 @app.route('/')
 def home():
-    # Sort data berdasarkan waktu terbaru
     sorted_data = sorted(presensi_data, key=lambda x: x['timestamp'], reverse=True)
     
-    # Statistik lengkap
     today = datetime.now(WIB).date()
     this_week_start = today - timedelta(days=today.weekday())
     this_month_start = today.replace(day=1)
@@ -99,7 +95,6 @@ def tambah_presensi():
             flash('Nama harus diisi minimal 2 karakter!', 'error')
             return redirect(url_for('home'))
         
-        # Cek duplikasi nama hari ini
         today = datetime.now(WIB).date().strftime('%Y-%m-%d')
         existing = [d for d in presensi_data if d['nama'].lower() == nama.lower() and d['date'] == today]
         
@@ -107,11 +102,9 @@ def tambah_presensi():
             flash(f'{nama} sudah melakukan presensi hari ini pada {existing[0]["waktu"]}!', 'warning')
             return redirect(url_for('home'))
         
-        # Waktu Indonesia yang akurat
         now = datetime.now(WIB)
         status, icon = get_attendance_status(now)
         
-        # Generate unique ID
         new_id = max([d['id'] for d in presensi_data], default=0) + 1
         
         presensi_data.append({
@@ -165,10 +158,8 @@ def admin_logout():
 @app.route('/admin/dashboard')
 @admin_required
 def admin_dashboard():
-    # Advanced statistics
     today = datetime.now(WIB).date()
     
-    # Daily statistics for the last 7 days
     daily_stats = []
     for i in range(7):
         date = today - timedelta(days=i)
@@ -179,15 +170,6 @@ def admin_dashboard():
             'count': count
         })
     
-    # Hourly distribution
-    hourly_stats = {}
-    for hour in range(24):
-        hourly_stats[f"{hour:02d}:00"] = len([
-            d for d in presensi_data 
-            if int(d['waktu'].split(':')[0]) == hour
-        ])
-    
-    # Status distribution
     status_stats = {
         'Tepat Waktu': len([d for d in presensi_data if d['status'] == 'Tepat Waktu']),
         'Terlambat': len([d for d in presensi_data if d['status'] == 'Terlambat']),
@@ -197,7 +179,6 @@ def admin_dashboard():
     return render_template('admin_dashboard.html',
                          data=presensi_data,
                          daily_stats=daily_stats,
-                         hourly_stats=hourly_stats,
                          status_stats=status_stats,
                          settings=app_settings,
                          admin_username=session.get('admin_username'))
@@ -233,7 +214,7 @@ def clear_all_data():
 @app.route('/export')
 def export_data():
     try:
-        export_data = {
+        export_data_obj = {
             'metadata': {
                 'exported_at': datetime.now(WIB).isoformat(),
                 'total_records': len(presensi_data),
@@ -243,7 +224,7 @@ def export_data():
             'settings': app_settings,
             'data': presensi_data
         }
-        return jsonify(export_data)
+        return jsonify(export_data_obj)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
