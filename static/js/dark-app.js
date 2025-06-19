@@ -57,7 +57,6 @@ function setupFormValidation() {
     const submitBtn = document.getElementById('submitBtn');
     
     if (form && namaInput && pinInput && actionInput) {
-        // PIN validation
         pinInput.addEventListener('input', function() {
             this.value = this.value.replace(/[^0-9]/g, '');
             
@@ -70,7 +69,6 @@ function setupFormValidation() {
             }
         });
         
-        // Action change handler
         actionInput.addEventListener('change', function() {
             const action = this.value;
             const submitBtn = document.getElementById('submitBtn');
@@ -84,7 +82,6 @@ function setupFormValidation() {
             }
         });
         
-        // Form submission with geolocation
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -229,7 +226,6 @@ function setupKeyboardShortcuts() {
             exportData();
         }
         
-        // Quick action shortcuts
         if (e.ctrlKey && e.key === '1') {
             e.preventDefault();
             const actionSelect = document.getElementById('action');
