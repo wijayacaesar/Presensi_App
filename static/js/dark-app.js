@@ -1,26 +1,17 @@
-// Advanced JavaScript untuk Dark Mode App
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
 });
 
 function initializeApp() {
-    // Core functions
     updateTime();
     setInterval(updateTime, 1000);
-    
-    // UI enhancements
     setupFormValidation();
     setupDeleteConfirmations();
     autoHideFlashMessages();
     setupKeyboardShortcuts();
-    
-    // Auto-refresh
     setInterval(updateStats, 30000);
-    
-    // Visual effects
     addGlowEffects();
     setupScrollAnimations();
-    
     console.log('🚀 Dark Mode Presensi App Initialized');
 }
 
@@ -48,7 +39,6 @@ function updateTime() {
     
     if (timeElement) {
         timeElement.textContent = timeString;
-        // Add pulsing effect for seconds
         if (now.getSeconds() % 2 === 0) {
             timeElement.style.textShadow = '0 0 20px var(--neon-blue)';
         } else {
@@ -65,14 +55,10 @@ function setupFormValidation() {
     const submitBtn = document.getElementById('submitBtn');
     
     if (form && namaInput) {
-        // Real-time validation
         namaInput.addEventListener('input', function() {
             const value = this.value.trim();
-            
-            // Remove numbers and special characters
             this.value = value.replace(/[^a-zA-Z\s]/g, '');
             
-            // Visual feedback
             if (value.length >= 2) {
                 this.style.borderColor = 'var(--neon-green)';
                 this.style.boxShadow = '0 0 10px rgba(104, 211, 145, 0.3)';
@@ -82,10 +68,8 @@ function setupFormValidation() {
             }
         });
         
-        // Form submission with loading state
         form.addEventListener('submit', function(e) {
             const nama = namaInput.value.trim();
-            
             if (nama.length < 2) {
                 e.preventDefault();
                 showNotification('Nama harus minimal 2 karakter!', 'error');
@@ -93,7 +77,6 @@ function setupFormValidation() {
                 return;
             }
             
-            // Show loading state
             submitBtn.innerHTML = '<span class="spinner"></span> Processing...';
             submitBtn.disabled = true;
         });
@@ -101,7 +84,6 @@ function setupFormValidation() {
 }
 
 function setupDeleteConfirmations() {
-    // Individual delete buttons
     document.querySelectorAll('a[href*="/delete/"]').forEach(button => {
         button.addEventListener('click', function(e) {
             const nama = this.closest('tr').querySelector('td:nth-child(2)').textContent;
@@ -111,7 +93,6 @@ function setupDeleteConfirmations() {
         });
     });
     
-    // Clear all data button
     const clearButton = document.querySelector('a[href*="/clear"]');
     if (clearButton) {
         clearButton.addEventListener('click', function(e) {
@@ -136,19 +117,16 @@ function autoHideFlashMessages() {
 
 function setupKeyboardShortcuts() {
     document.addEventListener('keydown', function(e) {
-        // Ctrl + Enter to submit form
         if (e.ctrlKey && e.key === 'Enter') {
             const form = document.getElementById('attendanceForm');
             if (form) form.submit();
         }
         
-        // Ctrl + R to refresh data
         if (e.ctrlKey && e.key === 'r') {
             e.preventDefault();
             refreshData();
         }
         
-        // Ctrl + E to export data
         if (e.ctrlKey && e.key === 'e') {
             e.preventDefault();
             exportData();
@@ -160,10 +138,8 @@ function updateStats() {
     fetch('/api/stats')
         .then(response => response.json())
         .then(data => {
-            // Update stat numbers with animation
             updateStatNumber('.stat-total .stat-number', data.total);
             updateStatNumber('.stat-today .stat-number', data.today);
-            
             console.log('📊 Stats updated:', data);
         })
         .catch(error => console.log('Stats update failed:', error));
@@ -187,7 +163,6 @@ function updateStatNumber(selector, newValue) {
 }
 
 function addGlowEffects() {
-    // Add glow effect to buttons on hover
     document.querySelectorAll('.btn').forEach(btn => {
         btn.addEventListener('mouseenter', function() {
             this.style.filter = 'brightness(1.2)';
@@ -198,7 +173,6 @@ function addGlowEffects() {
         });
     });
     
-    // Add glow effect to stat cards
     document.querySelectorAll('.stat-card').forEach(card => {
         card.addEventListener('mouseenter', function() {
             this.style.boxShadow = '0 0 30px rgba(0, 212, 255, 0.4)';
@@ -225,7 +199,6 @@ function setupScrollAnimations() {
         });
     }, observerOptions);
     
-    // Observe all cards and sections
     document.querySelectorAll('.stat-card, .form-section, .data-section').forEach(el => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(20px)';
@@ -296,7 +269,6 @@ function showNotification(message, type = 'info') {
     const container = document.querySelector('.flash-messages') || document.querySelector('.container');
     container.insertBefore(notification, container.firstChild);
     
-    // Auto-hide after 4 seconds
     setTimeout(() => {
         notification.style.opacity = '0';
         notification.style.transform = 'translateY(-20px)';
@@ -304,9 +276,7 @@ function showNotification(message, type = 'info') {
     }, 4000);
 }
 
-// Initialize advanced features
 function initAdvancedFeatures() {
-    // Add typing effect to title
     const title = document.querySelector('.header h1');
     if (title) {
         const text = title.textContent;
@@ -324,7 +294,6 @@ function initAdvancedFeatures() {
         setTimeout(typeWriter, 500);
     }
     
-    // Add particle effect (optional)
     createParticleEffect();
 }
 
@@ -379,5 +348,4 @@ function createParticleEffect() {
     animate();
 }
 
-// Initialize when DOM is ready
 setTimeout(initAdvancedFeatures, 1000);
