@@ -7,7 +7,7 @@ import os
 from functools import wraps
 
 # FIX: Path template yang benar
-app = Flask(__name__, template_folder='../templates', static_folder='../static')
+app = Flask(__name__, template_folder='templates/', static_folder='../static')
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
 # Timezone Indonesia
