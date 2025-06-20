@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin Dashboard - {{ settings.title }}</title>
-    <!-- FIX: Gunakan nama file CSS yang benar -->
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
@@ -18,7 +17,6 @@
   </head>
   <body>
     <div class="container">
-      <!-- Admin Header -->
       <div class="admin-header">
         <div class="admin-nav">
           <div>
@@ -40,7 +38,6 @@
         </div>
       </div>
 
-      <!-- Flash Messages -->
       <div class="flash-messages">
         {% with messages = get_flashed_messages(with_categories=true) %} {% if
         messages %} {% for category, message in messages %}
@@ -59,7 +56,6 @@
         {% endfor %} {% endif %} {% endwith %}
       </div>
 
-      <!-- Advanced Statistics -->
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-number">{{ data|length }}</div>
@@ -74,12 +70,73 @@
           <div class="stat-label">Late</div>
         </div>
         <div class="stat-card">
-          <div class="stat-number">{{ status_stats['Datang Awal'] }}</div>
-          <div class="stat-label">Early</div>
+          <div class="stat-number">{{ status_stats['Completed'] }}</div>
+          <div class="stat-label">Completed</div>
         </div>
       </div>
 
-      <!-- Data Management -->
+      {% if audit_data %}
+      <div class="data-section" style="margin-bottom: 30px">
+        <div class="data-header">
+          <h2 class="data-title">
+            <span>📝</span>
+            Pending Audit ({{ audit_data|length }})
+          </h2>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nama</th>
+                <th>Waktu</th>
+                <th>Status</th>
+                <th>Keterangan</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in audit_data %} {% if item.audit_status == 'Pending'
+              %}
+              <tr>
+                <td><strong>{{ item.nama }}</strong></td>
+                <td>{{ item.datetime }}</td>
+                <td>
+                  <span
+                    class="status-badge status-{{ item.clock_in_status.lower().replace(' ', '-') }}"
+                  >
+                    {{ item.clock_in_icon }} {{ item.clock_in_status }}
+                  </span>
+                </td>
+                <td>{{ item.keterangan }}</td>
+                <td>
+                  <a
+                    href="{{ url_for('audit_record', record_id=item.id, action='approve') }}"
+                    class="btn btn-secondary"
+                    style="
+                      padding: 6px 12px;
+                      font-size: 0.8rem;
+                      margin-right: 5px;
+                    "
+                  >
+                    ✅ Approve
+                  </a>
+                  <a
+                    href="{{ url_for('audit_record', record_id=item.id, action='reject') }}"
+                    class="btn btn-danger"
+                    style="padding: 6px 12px; font-size: 0.8rem"
+                  >
+                    ❌ Reject
+                  </a>
+                </td>
+              </tr>
+              {% endif %} {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
       <div class="data-section">
         <div class="data-header">
           <h2 class="data-title">
@@ -110,9 +167,12 @@
               <tr>
                 <th>ID</th>
                 <th>Name</th>
-                <th>Time</th>
+                <th>Clock In</th>
+                <th>Clock Out</th>
+                <th>Work Hours</th>
                 <th>Date</th>
-                <th>Status</th>
+                <th>Status In</th>
+                <th>Status Out</th>
                 <th>Location</th>
                 <th>Notes</th>
                 <th>Actions</th>
@@ -123,14 +183,31 @@
               <tr class="fade-in">
                 <td><strong>#{{ item.id }}</strong></td>
                 <td><strong>{{ item.nama }}</strong></td>
-                <td>{{ item.waktu }}</td>
+                <td>{{ item.clock_in or '-' }}</td>
+                <td>{{ item.clock_out or '-' }}</td>
+                <td class="work-hours">
+                  <strong>{{ item.work_hours or '0:00' }}</strong>
+                </td>
                 <td>{{ item.date }}</td>
                 <td>
+                  {% if item.clock_in_status %}
                   <span
-                    class="status-badge status-{{ item.status.lower().replace(' ', '-') }}"
+                    class="status-badge status-{{ item.clock_in_status.lower().replace(' ', '-') }}"
                   >
-                    {{ item.status_icon }} {{ item.status }}
+                    {{ item.clock_in_icon }} {{ item.clock_in_status }}
                   </span>
+                  {% else %} - {% endif %}
+                </td>
+                <td>
+                  {% if item.clock_out_status %}
+                  <span
+                    class="status-badge status-{{ item.clock_out_status.lower().replace(' ', '-') }}"
+                  >
+                    {{ item.clock_out_icon }} {{ item.clock_out_status }}
+                  </span>
+                  {% else %}
+                  <span style="color: var(--text-muted)">Belum Clock Out</span>
+                  {% endif %}
                 </td>
                 <td>{{ item.lokasi }}</td>
                 <td>{{ item.keterangan }}</td>
@@ -160,7 +237,6 @@
         {% endif %}
       </div>
 
-      <!-- Daily Statistics Chart -->
       <div class="data-section" style="margin-top: 30px">
         <h2 class="data-title">
           <span>📈</span>
@@ -199,7 +275,6 @@
     </div>
 
     <script>
-      // Export functionality
       function exportData() {
         fetch("/export")
           .then((response) => response.json())
@@ -218,7 +293,6 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            // Show success message
             const flashContainer = document.querySelector(".flash-messages");
             const successMsg = document.createElement("div");
             successMsg.className = "flash-message flash-success";
@@ -234,7 +308,6 @@
           });
       }
 
-      // Auto-refresh data every 30 seconds
       setInterval(() => {
         location.reload();
       }, 30000);
