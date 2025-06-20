@@ -1,18 +1,27 @@
+// Advanced JavaScript untuk Dark Mode App
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
 });
 
 function initializeApp() {
+    // Core functions
     updateTime();
     setInterval(updateTime, 1000);
+    
+    // UI enhancements
     setupFormValidation();
     setupDeleteConfirmations();
     autoHideFlashMessages();
     setupKeyboardShortcuts();
+    
+    // Auto-refresh
     setInterval(updateStats, 30000);
+    
+    // Visual effects
     addGlowEffects();
     setupScrollAnimations();
-    console.log('🚀 Clock In/Out System Initialized');
+    
+    console.log('🚀 Dark Mode Presensi App Initialized');
 }
 
 function updateTime() {
@@ -39,6 +48,7 @@ function updateTime() {
     
     if (timeElement) {
         timeElement.textContent = timeString;
+        // Add pulsing effect for seconds
         if (now.getSeconds() % 2 === 0) {
             timeElement.style.textShadow = '0 0 20px var(--neon-blue)';
         } else {
@@ -52,15 +62,18 @@ function updateTime() {
 function setupFormValidation() {
     const form = document.getElementById('attendanceForm');
     const namaInput = document.getElementById('nama');
-    const pinInput = document.getElementById('pin');
-    const actionInput = document.getElementById('action');
     const submitBtn = document.getElementById('submitBtn');
     
-    if (form && namaInput && pinInput && actionInput) {
-        pinInput.addEventListener('input', function() {
-            this.value = this.value.replace(/[^0-9]/g, '');
+    if (form && namaInput) {
+        // Real-time validation
+        namaInput.addEventListener('input', function() {
+            const value = this.value.trim();
             
-            if (this.value.length === 4) {
+            // Remove numbers and special characters
+            this.value = value.replace(/[^a-zA-Z\s]/g, '');
+            
+            // Visual feedback
+            if (value.length >= 2) {
                 this.style.borderColor = 'var(--neon-green)';
                 this.style.boxShadow = '0 0 10px rgba(104, 211, 145, 0.3)';
             } else {
@@ -69,112 +82,26 @@ function setupFormValidation() {
             }
         });
         
-        actionInput.addEventListener('change', function() {
-            const action = this.value;
-            const submitBtn = document.getElementById('submitBtn');
-            
-            if (action === 'clock_in') {
-                submitBtn.innerHTML = '<span>🌅</span> Clock In';
-                submitBtn.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
-            } else {
-                submitBtn.innerHTML = '<span>🌙</span> Clock Out';
-                submitBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-            }
-        });
-        
+        // Form submission with loading state
         form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
             const nama = namaInput.value.trim();
-            const pin = pinInput.value.trim();
-            const action = actionInput.value;
             
-            if (!nama) {
-                showNotification('Pilih nama Anda!', 'error');
+            if (nama.length < 2) {
+                e.preventDefault();
+                showNotification('Nama harus minimal 2 karakter!', 'error');
                 namaInput.focus();
                 return;
             }
             
-            if (pin.length !== 4) {
-                showNotification('PIN harus 4 digit!', 'error');
-                pinInput.focus();
-                return;
-            }
-            
-            if (!action) {
-                showNotification('Pilih aksi Clock In atau Clock Out!', 'error');
-                actionInput.focus();
-                return;
-            }
-            
-            getLocationAndSubmit();
+            // Show loading state
+            submitBtn.innerHTML = '<span class="spinner"></span> Processing...';
+            submitBtn.disabled = true;
         });
     }
 }
 
-function getLocationAndSubmit() {
-    const submitBtn = document.getElementById('submitBtn');
-    const form = document.getElementById('attendanceForm');
-    const action = document.getElementById('action').value;
-    
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<span class="spinner"></span> Getting Location...';
-    submitBtn.disabled = true;
-    
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            function(position) {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                
-                document.getElementById('latitude').value = lat;
-                document.getElementById('longitude').value = lng;
-                
-                if (action === 'clock_in') {
-                    submitBtn.innerHTML = '<span class="spinner"></span> Processing Clock In...';
-                } else {
-                    submitBtn.innerHTML = '<span class="spinner"></span> Processing Clock Out...';
-                }
-                
-                setTimeout(() => {
-                    form.submit();
-                }, 500);
-            },
-            function(error) {
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-                
-                let errorMsg = 'Gagal mendapatkan lokasi! ';
-                switch(error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMsg += 'Izinkan akses lokasi untuk melanjutkan.';
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMsg += 'Informasi lokasi tidak tersedia.';
-                        break;
-                    case error.TIMEOUT:
-                        errorMsg += 'Request timeout.';
-                        break;
-                    default:
-                        errorMsg += 'Error tidak diketahui.';
-                        break;
-                }
-                showNotification(errorMsg, 'error');
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 60000
-            }
-        );
-    } else {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-        showNotification('Browser tidak mendukung geolocation!', 'error');
-    }
-}
-
 function setupDeleteConfirmations() {
+    // Individual delete buttons
     document.querySelectorAll('a[href*="/delete/"]').forEach(button => {
         button.addEventListener('click', function(e) {
             const nama = this.closest('tr').querySelector('td:nth-child(2)').textContent;
@@ -184,6 +111,7 @@ function setupDeleteConfirmations() {
         });
     });
     
+    // Clear all data button
     const clearButton = document.querySelector('a[href*="/clear"]');
     if (clearButton) {
         clearButton.addEventListener('click', function(e) {
@@ -208,40 +136,22 @@ function autoHideFlashMessages() {
 
 function setupKeyboardShortcuts() {
     document.addEventListener('keydown', function(e) {
+        // Ctrl + Enter to submit form
         if (e.ctrlKey && e.key === 'Enter') {
             const form = document.getElementById('attendanceForm');
-            if (form) {
-                const submitEvent = new Event('submit');
-                form.dispatchEvent(submitEvent);
-            }
+            if (form) form.submit();
         }
         
+        // Ctrl + R to refresh data
         if (e.ctrlKey && e.key === 'r') {
             e.preventDefault();
             refreshData();
         }
         
+        // Ctrl + E to export data
         if (e.ctrlKey && e.key === 'e') {
             e.preventDefault();
             exportData();
-        }
-        
-        if (e.ctrlKey && e.key === '1') {
-            e.preventDefault();
-            const actionSelect = document.getElementById('action');
-            if (actionSelect) {
-                actionSelect.value = 'clock_in';
-                actionSelect.dispatchEvent(new Event('change'));
-            }
-        }
-        
-        if (e.ctrlKey && e.key === '2') {
-            e.preventDefault();
-            const actionSelect = document.getElementById('action');
-            if (actionSelect) {
-                actionSelect.value = 'clock_out';
-                actionSelect.dispatchEvent(new Event('change'));
-            }
         }
     });
 }
@@ -250,9 +160,10 @@ function updateStats() {
     fetch('/api/stats')
         .then(response => response.json())
         .then(data => {
+            // Update stat numbers with animation
             updateStatNumber('.stat-total .stat-number', data.total);
             updateStatNumber('.stat-today .stat-number', data.today);
-            updateStatNumber('.stat-completed .stat-number', data.status_breakdown.completed);
+            
             console.log('📊 Stats updated:', data);
         })
         .catch(error => console.log('Stats update failed:', error));
@@ -276,6 +187,7 @@ function updateStatNumber(selector, newValue) {
 }
 
 function addGlowEffects() {
+    // Add glow effect to buttons on hover
     document.querySelectorAll('.btn').forEach(btn => {
         btn.addEventListener('mouseenter', function() {
             this.style.filter = 'brightness(1.2)';
@@ -286,6 +198,7 @@ function addGlowEffects() {
         });
     });
     
+    // Add glow effect to stat cards
     document.querySelectorAll('.stat-card').forEach(card => {
         card.addEventListener('mouseenter', function() {
             this.style.boxShadow = '0 0 30px rgba(0, 212, 255, 0.4)';
@@ -312,6 +225,7 @@ function setupScrollAnimations() {
         });
     }, observerOptions);
     
+    // Observe all cards and sections
     document.querySelectorAll('.stat-card, .form-section, .data-section').forEach(el => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(20px)';
@@ -336,7 +250,7 @@ function exportData() {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `attendance-data-${new Date().toISOString().split('T')[0]}.json`;
+            a.download = `presensi-data-${new Date().toISOString().split('T')[0]}.json`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -382,6 +296,7 @@ function showNotification(message, type = 'info') {
     const container = document.querySelector('.flash-messages') || document.querySelector('.container');
     container.insertBefore(notification, container.firstChild);
     
+    // Auto-hide after 4 seconds
     setTimeout(() => {
         notification.style.opacity = '0';
         notification.style.transform = 'translateY(-20px)';
@@ -389,7 +304,9 @@ function showNotification(message, type = 'info') {
     }, 4000);
 }
 
+// Initialize advanced features
 function initAdvancedFeatures() {
+    // Add typing effect to title
     const title = document.querySelector('.header h1');
     if (title) {
         const text = title.textContent;
@@ -407,6 +324,7 @@ function initAdvancedFeatures() {
         setTimeout(typeWriter, 500);
     }
     
+    // Add particle effect (optional)
     createParticleEffect();
 }
 
@@ -461,4 +379,5 @@ function createParticleEffect() {
     animate();
 }
 
+// Initialize when DOM is ready
 setTimeout(initAdvancedFeatures, 1000);

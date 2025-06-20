@@ -4,39 +4,29 @@ import pytz
 import hashlib
 import secrets
 import os
-import math
 from functools import wraps
 
+# FIX: Path template yang benar
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
+# Timezone Indonesia
 WIB = pytz.timezone('Asia/Jakarta')
 
+# Admin credentials
 ADMIN_CREDENTIALS = {
-    'admin': hashlib.sha256('admin'.encode()).hexdigest()
+    'admin': hashlib.sha256('admin123'.encode()).hexdigest(),
+    'supervisor': hashlib.sha256('super456'.encode()).hexdigest()
 }
 
-EMPLOYEE_PINS = {
-    'John Doe': '1234',
-    'Jane Smith': '5678',
-    'Ahmad Fauzi': '9999',
-    'Siti Nurhaliza': '1111',
-    'Budi Santoso': '2222',
-    'Rina Wijaya': '3333'
-}
-
-OFFICE_LOCATION = {
-    'latitude': -6.2088,
-    'longitude': 106.8456,
-    'radius_km': 0.5
-}
-
+# Data storage
 presensi_data = []
 app_settings = {
     'title': 'Sistem Presensi Digital',
     'organization': 'PT. Wijaya Abadi',
-    'version': '2.2.0',
+    'version': '2.0.0',
     'theme': 'dark',
+    'max_daily_entries': 1,
     'work_start_time': '08:00',
     'work_end_time': '17:00',
     'break_start_time': '12:00',
@@ -52,80 +42,25 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def get_attendance_status(current_time, action_type='clock_in'):
+def get_attendance_status(current_time):
     hour = current_time.hour
     minute = current_time.minute
+    
+    work_start = 8 * 60  # 08:00 in minutes
+    late_threshold = 8 * 60 + 15  # 08:15 in minutes
     current_minutes = hour * 60 + minute
     
-    if action_type == 'clock_in':
-        work_start = 8 * 60
-        late_threshold = 8 * 60 + 15
-        
-        if current_minutes < work_start:
-            return 'Datang Awal', '🌅'
-        elif current_minutes <= late_threshold:
-            return 'Tepat Waktu', '✅'
-        else:
-            return 'Terlambat', '⏰'
+    if current_minutes < work_start:
+        return 'Datang Awal', '🌅'
+    elif current_minutes <= late_threshold:
+        return 'Tepat Waktu', '✅'
     else:
-        work_end = 17 * 60
-        early_threshold = 17 * 60 - 30
-        
-        if current_minutes < early_threshold:
-            return 'Pulang Awal', '🏃'
-        elif current_minutes <= work_end:
-            return 'Tepat Waktu', '✅'
-        else:
-            return 'Lembur', '🌙'
-
-def calculate_distance(lat1, lng1, lat2, lng2):
-    R = 6371
-    lat1_rad = math.radians(lat1)
-    lng1_rad = math.radians(lng1)
-    lat2_rad = math.radians(lat2)
-    lng2_rad = math.radians(lng2)
-    
-    dlat = lat2_rad - lat1_rad
-    dlng = lng2_rad - lng1_rad
-    
-    a = math.sin(dlat/2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlng/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-    
-    return R * c
-
-def is_location_valid(user_lat, user_lng):
-    if not user_lat or not user_lng:
-        return False
-    
-    distance = calculate_distance(
-        float(user_lat), float(user_lng),
-        OFFICE_LOCATION['latitude'], OFFICE_LOCATION['longitude']
-    )
-    
-    return distance <= OFFICE_LOCATION['radius_km']
-
-def calculate_work_hours(clock_in_time, clock_out_time):
-    if not clock_in_time or not clock_out_time:
-        return "0:00"
-    
-    try:
-        clock_in = datetime.strptime(clock_in_time, '%H:%M:%S')
-        clock_out = datetime.strptime(clock_out_time, '%H:%M:%S')
-        
-        if clock_out < clock_in:
-            clock_out += timedelta(days=1)
-        
-        work_duration = clock_out - clock_in
-        hours = work_duration.seconds // 3600
-        minutes = (work_duration.seconds % 3600) // 60
-        
-        return f"{hours}:{minutes:02d}"
-    except:
-        return "0:00"
+        return 'Terlambat', '⏰'
 
 @app.route('/')
 def home():
     sorted_data = sorted(presensi_data, key=lambda x: x['timestamp'], reverse=True)
+    
     today = datetime.now(WIB).date()
     this_week_start = today - timedelta(days=today.weekday())
     this_month_start = today.replace(day=1)
@@ -137,10 +72,9 @@ def home():
                          datetime.strptime(d['date'], '%Y-%m-%d').date() >= this_week_start]),
         'this_month': len([d for d in presensi_data if 
                           datetime.strptime(d['date'], '%Y-%m-%d').date() >= this_month_start]),
-        'on_time': len([d for d in presensi_data if d.get('clock_in_status') == 'Tepat Waktu']),
-        'late': len([d for d in presensi_data if d.get('clock_in_status') == 'Terlambat']),
-        'early': len([d for d in presensi_data if d.get('clock_in_status') == 'Datang Awal']),
-        'completed': len([d for d in presensi_data if d.get('clock_out') is not None])
+        'on_time': len([d for d in presensi_data if d['status'] == 'Tepat Waktu']),
+        'late': len([d for d in presensi_data if d['status'] == 'Terlambat']),
+        'early': len([d for d in presensi_data if d['status'] == 'Datang Awal'])
     }
     
     return render_template('index.html', 
@@ -148,103 +82,47 @@ def home():
                          stats=stats, 
                          settings=app_settings,
                          current_time=datetime.now(WIB),
-                         is_admin=session.get('admin_logged_in', False),
-                         employee_list=list(EMPLOYEE_PINS.keys()))
+                         is_admin=session.get('admin_logged_in', False))
 
 @app.route('/presensi', methods=['POST'])
 def tambah_presensi():
     try:
-        nama = request.form.get('nama', '').strip()
-        pin = request.form.get('pin', '').strip()
-        action = request.form.get('action', 'clock_in')
+        nama = request.form.get('nama', '').strip().title()
         keterangan = request.form.get('keterangan', '').strip()
         lokasi = request.form.get('lokasi', '').strip()
-        user_lat = request.form.get('latitude', '')
-        user_lng = request.form.get('longitude', '')
         
-        if not nama or nama not in EMPLOYEE_PINS:
-            flash('❌ Nama karyawan tidak terdaftar!', 'error')
+        if not nama or len(nama) < 2:
+            flash('Nama harus diisi minimal 2 karakter!', 'error')
             return redirect(url_for('home'))
         
-        if not pin or EMPLOYEE_PINS[nama] != pin:
-            flash('❌ PIN salah! Presensi ditolak.', 'error')
-            return redirect(url_for('home'))
+        today = datetime.now(WIB).date().strftime('%Y-%m-%d')
+        existing = [d for d in presensi_data if d['nama'].lower() == nama.lower() and d['date'] == today]
         
-        if not is_location_valid(user_lat, user_lng):
-            flash('❌ Anda tidak berada di area kantor! Presensi ditolak.', 'error')
+        if existing and app_settings['max_daily_entries'] == 1:
+            flash(f'{nama} sudah melakukan presensi hari ini pada {existing[0]["waktu"]}!', 'warning')
             return redirect(url_for('home'))
         
         now = datetime.now(WIB)
-        today = now.date().strftime('%Y-%m-%d')
+        status, icon = get_attendance_status(now)
         
-        existing_record = None
-        for record in presensi_data:
-            if record['nama'] == nama and record['date'] == today:
-                existing_record = record
-                break
+        new_id = max([d['id'] for d in presensi_data], default=0) + 1
         
-        if action == 'clock_in':
-            if existing_record:
-                flash(f'⚠️ {nama} sudah melakukan clock in hari ini pada {existing_record["clock_in"]}!', 'warning')
-                return redirect(url_for('home'))
-            
-            status, icon = get_attendance_status(now, 'clock_in')
-            needs_audit = bool(keterangan and keterangan.strip() != '')
-            new_id = max([d['id'] for d in presensi_data], default=0) + 1
-            
-            presensi_data.append({
-                'id': new_id,
-                'nama': nama,
-                'clock_in': now.strftime('%H:%M:%S'),
-                'clock_out': None,
-                'clock_in_status': status,
-                'clock_out_status': None,
-                'clock_in_icon': icon,
-                'clock_out_icon': None,
-                'date': today,
-                'datetime': now.strftime('%Y-%m-%d %H:%M:%S'),
-                'timestamp': now.timestamp(),
-                'keterangan': keterangan or '-',
-                'lokasi': lokasi or 'Kantor',
-                'latitude': float(user_lat) if user_lat else None,
-                'longitude': float(user_lng) if user_lng else None,
-                'day_name': now.strftime('%A'),
-                'created_at': now.isoformat(),
-                'pin_verified': True,
-                'location_verified': True,
-                'needs_audit': needs_audit,
-                'audit_status': 'Pending' if needs_audit else 'Not Required',
-                'work_hours': '0:00'
-            })
-            
-            flash(f'✅ Clock In {nama} berhasil! Status: {status} {icon}', 'success')
-            
-        else:
-            if not existing_record:
-                flash(f'❌ {nama} belum melakukan clock in hari ini!', 'error')
-                return redirect(url_for('home'))
-            
-            if existing_record.get('clock_out'):
-                flash(f'⚠️ {nama} sudah melakukan clock out hari ini pada {existing_record["clock_out"]}!', 'warning')
-                return redirect(url_for('home'))
-            
-            status, icon = get_attendance_status(now, 'clock_out')
-            needs_audit = bool(keterangan and keterangan.strip() != '') or existing_record.get('needs_audit', False)
-            
-            existing_record['clock_out'] = now.strftime('%H:%M:%S')
-            existing_record['clock_out_status'] = status
-            existing_record['clock_out_icon'] = icon
-            existing_record['work_hours'] = calculate_work_hours(
-                existing_record['clock_in'], 
-                existing_record['clock_out']
-            )
-            
-            if keterangan:
-                existing_record['keterangan'] = keterangan
-                existing_record['needs_audit'] = True
-                existing_record['audit_status'] = 'Pending'
-            
-            flash(f'✅ Clock Out {nama} berhasil! Status: {status} {icon} | Jam Kerja: {existing_record["work_hours"]}', 'success')
+        presensi_data.append({
+            'id': new_id,
+            'nama': nama,
+            'waktu': now.strftime('%H:%M:%S'),
+            'date': now.strftime('%Y-%m-%d'),
+            'datetime': now.strftime('%Y-%m-%d %H:%M:%S'),
+            'timestamp': now.timestamp(),
+            'status': status,
+            'status_icon': icon,
+            'keterangan': keterangan or '-',
+            'lokasi': lokasi or 'Kantor',
+            'day_name': now.strftime('%A'),
+            'created_at': now.isoformat()
+        })
+        
+        flash(f'✅ Presensi {nama} berhasil dicatat! Status: {status} {icon}', 'success')
         
     except Exception as e:
         flash('❌ Terjadi kesalahan saat menyimpan presensi!', 'error')
@@ -293,17 +171,13 @@ def admin_dashboard():
         })
     
     status_stats = {
-        'Tepat Waktu': len([d for d in presensi_data if d.get('clock_in_status') == 'Tepat Waktu']),
-        'Terlambat': len([d for d in presensi_data if d.get('clock_in_status') == 'Terlambat']),
-        'Datang Awal': len([d for d in presensi_data if d.get('clock_in_status') == 'Datang Awal']),
-        'Completed': len([d for d in presensi_data if d.get('clock_out') is not None])
+        'Tepat Waktu': len([d for d in presensi_data if d['status'] == 'Tepat Waktu']),
+        'Terlambat': len([d for d in presensi_data if d['status'] == 'Terlambat']),
+        'Datang Awal': len([d for d in presensi_data if d['status'] == 'Datang Awal'])
     }
-    
-    audit_data = [d for d in presensi_data if d.get('needs_audit', False)]
     
     return render_template('admin_dashboard.html',
                          data=presensi_data,
-                         audit_data=audit_data,
                          daily_stats=daily_stats,
                          status_stats=status_stats,
                          settings=app_settings,
@@ -348,8 +222,6 @@ def export_data():
                 'organization': app_settings['organization']
             },
             'settings': app_settings,
-            'employee_pins': {name: '****' for name in EMPLOYEE_PINS.keys()},
-            'office_location': OFFICE_LOCATION,
             'data': presensi_data
         }
         return jsonify(export_data_obj)
@@ -363,19 +235,14 @@ def api_stats():
         'total': len(presensi_data),
         'today': len([d for d in presensi_data if d['date'] == today.strftime('%Y-%m-%d')]),
         'status_breakdown': {
-            'on_time': len([d for d in presensi_data if d.get('clock_in_status') == 'Tepat Waktu']),
-            'late': len([d for d in presensi_data if d.get('clock_in_status') == 'Terlambat']),
-            'early': len([d for d in presensi_data if d.get('clock_in_status') == 'Datang Awal']),
-            'completed': len([d for d in presensi_data if d.get('clock_out') is not None])
-        },
-        'audit_breakdown': {
-            'pending': len([d for d in presensi_data if d.get('audit_status') == 'Pending']),
-            'approved': len([d for d in presensi_data if d.get('audit_status') == 'Approved']),
-            'rejected': len([d for d in presensi_data if d.get('audit_status') == 'Rejected'])
+            'on_time': len([d for d in presensi_data if d['status'] == 'Tepat Waktu']),
+            'late': len([d for d in presensi_data if d['status'] == 'Terlambat']),
+            'early': len([d for d in presensi_data if d['status'] == 'Datang Awal'])
         },
         'last_updated': datetime.now(WIB).isoformat()
     })
 
+# Export app untuk Vercel
 application = app
 
 if __name__ == '__main__':
