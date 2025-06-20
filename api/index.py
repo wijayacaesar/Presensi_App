@@ -309,6 +309,29 @@ def admin_dashboard():
                          settings=app_settings,
                          admin_username=session.get('admin_username'))
 
+@app.route('/admin/audit/<int:record_id>/<action>')
+@admin_required
+def audit_record(record_id, action):
+    try:
+        record = next((d for d in presensi_data if d['id'] == record_id), None)
+        if record and record.get('needs_audit', False):
+            if action == 'approve':
+                record['audit_status'] = 'Approved'
+                record['audited_by'] = session.get('admin_username')
+                record['audited_at'] = datetime.now(WIB).isoformat()
+                flash(f'✅ Presensi {record["nama"]} telah disetujui!', 'success')
+            elif action == 'reject':
+                record['audit_status'] = 'Rejected'
+                record['audited_by'] = session.get('admin_username')
+                record['audited_at'] = datetime.now(WIB).isoformat()
+                flash(f'❌ Presensi {record["nama"]} ditolak!', 'warning')
+        else:
+            flash('❌ Data tidak ditemukan atau tidak perlu audit!', 'error')
+    except Exception as e:
+        flash('❌ Gagal memproses audit!', 'error')
+    
+    return redirect(url_for('admin_dashboard'))
+
 @app.route('/admin/delete/<int:record_id>')
 @admin_required
 def delete_record(record_id):
