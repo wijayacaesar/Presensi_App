@@ -12,7 +12,6 @@ app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
 WIB = pytz.timezone('Asia/Jakarta')
 
-# ✅ FIX: Add missing closing brackets
 ADMIN_CREDENTIALS = {
     'admin': hashlib.sha256('admin'.encode()).hexdigest()
 }
@@ -26,11 +25,10 @@ EMPLOYEE_PINS = {
     'Rina Wijaya': '3333'
 }
 
-#Koordinat untuk testing
 OFFICE_LOCATION = {
     'latitude': -6.234055220571567,
-    'longitude': 106.82199279535402,  
-    'radius_km': 5.0
+    'longitude': 106.82199279535402,
+    'radius_km': 2.0 
 }
 
 presensi_data = []
@@ -106,24 +104,85 @@ def is_location_valid(user_lat, user_lng):
     
     return distance <= OFFICE_LOCATION['radius_km']
 
+# ✅ ENHANCED: Improved work hours calculation
 def calculate_work_hours(clock_in_time, clock_out_time):
+    """
+    Calculate work hours between clock in and clock out time
+    Returns formatted string like "9:30" for 9 hours 30 minutes
+    """
     if not clock_in_time or not clock_out_time:
         return "0:00"
     
     try:
+        # Parse time strings to datetime objects
+        clock_in = datetime.strptime(clock_in_time, '%H:%M:%S')
+        clock_out = datetime.strptime(clock_out_time, '%H:%M:%S')
+        
+        # Handle case where clock out is next day
+        if clock_out < clock_in:
+            clock_out += timedelta(days=1)
+        
+        # Calculate work duration
+        work_duration = clock_out - clock_in
+        
+        # Convert to hours and minutes
+        total_seconds = work_duration.total_seconds()
+        hours = int(total_seconds // 3600)
+        minutes = int((total_seconds % 3600) // 60)
+        
+        return f"{hours}:{minutes:02d}"
+    
+    except Exception as e:
+        print(f"Error calculating work hours: {e}")
+        return "0:00"
+
+# ✅ ENHANCED: Better break time calculation
+def calculate_effective_work_hours(clock_in_time, clock_out_time):
+    """
+    Calculate effective work hours excluding break time
+    Assumes 1 hour break from 12:00-13:00
+    """
+    if not clock_in_time or not clock_out_time:
+        return "0:00", "0:00"
+    
+    try:
+        # Get total work hours
+        total_hours = calculate_work_hours(clock_in_time, clock_out_time)
+        
+        # Parse times
         clock_in = datetime.strptime(clock_in_time, '%H:%M:%S')
         clock_out = datetime.strptime(clock_out_time, '%H:%M:%S')
         
         if clock_out < clock_in:
             clock_out += timedelta(days=1)
         
-        work_duration = clock_out - clock_in
-        hours = work_duration.seconds // 3600
-        minutes = (work_duration.seconds % 3600) // 60
+        # Break time boundaries
+        break_start = datetime.strptime('12:00:00', '%H:%M:%S')
+        break_end = datetime.strptime('13:00:00', '%H:%M:%S')
         
-        return f"{hours}:{minutes:02d}"
-    except:
-        return "0:00"
+        # Check if work period overlaps with break time
+        break_duration = 0
+        if clock_in <= break_end and clock_out >= break_start:
+            # Calculate overlap with break time
+            overlap_start = max(clock_in, break_start)
+            overlap_end = min(clock_out, break_end)
+            if overlap_end > overlap_start:
+                break_duration = (overlap_end - overlap_start).total_seconds() / 3600
+        
+        # Calculate effective hours
+        total_seconds = (clock_out - clock_in).total_seconds()
+        effective_seconds = total_seconds - (break_duration * 3600)
+        
+        effective_hours = int(effective_seconds // 3600)
+        effective_minutes = int((effective_seconds % 3600) // 60)
+        
+        effective_time = f"{effective_hours}:{effective_minutes:02d}"
+        
+        return total_hours, effective_time
+    
+    except Exception as e:
+        print(f"Error calculating effective work hours: {e}")
+        return "0:00", "0:00"
 
 @app.route('/')
 def home():
@@ -164,6 +223,7 @@ def tambah_presensi():
         user_lat = request.form.get('latitude', '')
         user_lng = request.form.get('longitude', '')
         
+        # Validation
         if not nama or nama not in EMPLOYEE_PINS:
             flash('❌ Nama karyawan tidak terdaftar!', 'error')
             return redirect(url_for('home'))
@@ -173,12 +233,13 @@ def tambah_presensi():
             return redirect(url_for('home'))
         
         if not is_location_valid(user_lat, user_lng):
-            flash('❌ Anda tidak berada di area kantor! Presensi ditolak.', 'error')
+            flash(f'❌ Anda tidak berada di area kantor! Distance: {calculate_distance(float(user_lat), float(user_lng), OFFICE_LOCATION["latitude"], OFFICE_LOCATION["longitude"]):.2f}km', 'error')
             return redirect(url_for('home'))
         
         now = datetime.now(WIB)
         today = now.date().strftime('%Y-%m-%d')
         
+        # Find existing record
         existing_record = None
         for record in presensi_data:
             if record['nama'] == nama and record['date'] == today:
@@ -186,6 +247,7 @@ def tambah_presensi():
                 break
         
         if action == 'clock_in':
+            # ✅ CLOCK IN LOGIC
             if existing_record:
                 flash(f'⚠️ {nama} sudah melakukan clock in hari ini pada {existing_record["clock_in"]}!', 'warning')
                 return redirect(url_for('home'))
@@ -216,12 +278,14 @@ def tambah_presensi():
                 'location_verified': True,
                 'needs_audit': needs_audit,
                 'audit_status': 'Pending' if needs_audit else 'Not Required',
-                'work_hours': '0:00'
+                'work_hours': '0:00',
+                'effective_work_hours': '0:00'
             })
             
             flash(f'✅ Clock In {nama} berhasil! Status: {status} {icon}', 'success')
             
         else:
+            # ✅ ENHANCED CLOCK OUT LOGIC
             if not existing_record:
                 flash(f'❌ {nama} belum melakukan clock in hari ini!', 'error')
                 return redirect(url_for('home'))
@@ -230,29 +294,68 @@ def tambah_presensi():
                 flash(f'⚠️ {nama} sudah melakukan clock out hari ini pada {existing_record["clock_out"]}!', 'warning')
                 return redirect(url_for('home'))
             
+            # Get clock out status
             status, icon = get_attendance_status(now, 'clock_out')
-            needs_audit = bool(keterangan and keterangan.strip() != '') or existing_record.get('needs_audit', False)
             
-            existing_record['clock_out'] = now.strftime('%H:%M:%S')
+            # Update existing record with clock out data
+            clock_out_time = now.strftime('%H:%M:%S')
+            existing_record['clock_out'] = clock_out_time
             existing_record['clock_out_status'] = status
             existing_record['clock_out_icon'] = icon
-            existing_record['work_hours'] = calculate_work_hours(
-                existing_record['clock_in'],
-                existing_record['clock_out']
+            
+            # ✅ CALCULATE WORK HOURS
+            total_hours, effective_hours = calculate_effective_work_hours(
+                existing_record['clock_in'], 
+                clock_out_time
             )
             
+            existing_record['work_hours'] = total_hours
+            existing_record['effective_work_hours'] = effective_hours
+            
+            # Update other fields
             if keterangan:
                 existing_record['keterangan'] = keterangan
                 existing_record['needs_audit'] = True
                 existing_record['audit_status'] = 'Pending'
             
-            flash(f'✅ Clock Out {nama} berhasil! Status: {status} {icon} | Jam Kerja: {existing_record["work_hours"]}', 'success')
+            # Update location if different
+            if lokasi:
+                existing_record['lokasi'] = lokasi
+            
+            # Update last modified
+            existing_record['clock_out_datetime'] = now.strftime('%Y-%m-%d %H:%M:%S')
+            existing_record['last_updated'] = now.isoformat()
+            
+            flash(f'✅ Clock Out {nama} berhasil! Status: {status} {icon} | Total: {total_hours} | Efektif: {effective_hours}', 'success')
         
     except Exception as e:
         flash('❌ Terjadi kesalahan saat menyimpan presensi!', 'error')
-        print(f"Error: {e}")
+        print(f"Error in tambah_presensi: {e}")
     
     return redirect(url_for('home'))
+
+# ✅ ENHANCED: Debug route to test work hours calculation
+@app.route('/test-work-hours')
+def test_work_hours():
+    test_cases = [
+        ('08:00:00', '17:00:00'),  # Normal 9 hours
+        ('08:30:00', '17:30:00'),  # 9 hours with 30 min late
+        ('07:45:00', '18:15:00'),  # Early in, overtime
+        ('09:00:00', '16:30:00'),  # Late in, early out
+        ('10:00:00', '11:30:00'),  # Short day (no break)
+    ]
+    
+    results = []
+    for clock_in, clock_out in test_cases:
+        total, effective = calculate_effective_work_hours(clock_in, clock_out)
+        results.append({
+            'clock_in': clock_in,
+            'clock_out': clock_out,
+            'total_hours': total,
+            'effective_hours': effective
+        })
+    
+    return jsonify({'test_results': results})
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
@@ -311,7 +414,6 @@ def admin_dashboard():
                          settings=app_settings,
                          admin_username=session.get('admin_username'))
 
-# ✅ FIX: Route dengan parameter yang benar
 @app.route('/admin/audit/<int:record_id>/<action>')
 @admin_required
 def audit_record(record_id, action):
@@ -335,7 +437,6 @@ def audit_record(record_id, action):
     
     return redirect(url_for('admin_dashboard'))
 
-# ✅ FIX: Route dengan parameter yang benar
 @app.route('/admin/delete/<int:record_id>')
 @admin_required
 def delete_record(record_id):
