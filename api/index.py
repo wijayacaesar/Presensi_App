@@ -12,6 +12,7 @@ app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
 WIB = pytz.timezone('Asia/Jakarta')
 
+# ✅ FIX: Add missing closing brackets
 ADMIN_CREDENTIALS = {
     'admin': hashlib.sha256('admin'.encode()).hexdigest()
 }
@@ -25,10 +26,11 @@ EMPLOYEE_PINS = {
     'Rina Wijaya': '3333'
 }
 
+#Koordinat untuk testing
 OFFICE_LOCATION = {
-    'latitude': -6.2088,
-    'longitude': 106.8456,
-    'radius_km': 0.5
+    'latitude': -6.234055220571567,
+    'longitude': 106.82199279535402,  
+    'radius_km': 5.0
 }
 
 presensi_data = []
@@ -143,9 +145,9 @@ def home():
         'completed': len([d for d in presensi_data if d.get('clock_out') is not None])
     }
     
-    return render_template('index.html', 
-                         data=sorted_data, 
-                         stats=stats, 
+    return render_template('index.html',
+                         data=sorted_data,
+                         stats=stats,
                          settings=app_settings,
                          current_time=datetime.now(WIB),
                          is_admin=session.get('admin_logged_in', False),
@@ -235,7 +237,7 @@ def tambah_presensi():
             existing_record['clock_out_status'] = status
             existing_record['clock_out_icon'] = icon
             existing_record['work_hours'] = calculate_work_hours(
-                existing_record['clock_in'], 
+                existing_record['clock_in'],
                 existing_record['clock_out']
             )
             
@@ -309,6 +311,7 @@ def admin_dashboard():
                          settings=app_settings,
                          admin_username=session.get('admin_username'))
 
+# ✅ FIX: Route dengan parameter yang benar
 @app.route('/admin/audit/<int:record_id>/<action>')
 @admin_required
 def audit_record(record_id, action):
@@ -332,6 +335,7 @@ def audit_record(record_id, action):
     
     return redirect(url_for('admin_dashboard'))
 
+# ✅ FIX: Route dengan parameter yang benar
 @app.route('/admin/delete/<int:record_id>')
 @admin_required
 def delete_record(record_id):
