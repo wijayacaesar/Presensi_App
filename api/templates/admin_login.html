@@ -6,7 +6,7 @@
     <title>Admin Login - {{ settings.title }}</title>
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/dark-style.css') }}"
+      href="{{ url_for('static', filename='css/style.css') }}"
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,7 +17,6 @@
   </head>
   <body>
     <div class="container">
-      <!-- Flash Messages -->
       <div class="flash-messages">
         {% with messages = get_flashed_messages(with_categories=true) %} {% if
         messages %} {% for category, message in messages %}
@@ -81,37 +80,6 @@
             <span>🏠</span>
             Kembali ke Home
           </a>
-        </div>
-
-        <div
-          style="
-            margin-top: 30px;
-            padding: 20px;
-            background: rgba(0, 212, 255, 0.1);
-            border-radius: 15px;
-            text-align: center;
-          "
-        >
-          <p
-            style="
-              color: var(--text-secondary);
-              font-size: 0.9rem;
-              margin-bottom: 10px;
-            "
-          >
-            <strong>Demo Credentials:</strong>
-          </p>
-          <p
-            style="
-              color: var(--neon-blue);
-              font-family: 'JetBrains Mono', monospace;
-            "
-          >
-            Username: <strong>admin</strong> | Password:
-            <strong>admin123</strong><br />
-            Username: <strong>supervisor</strong> | Password:
-            <strong>super456</strong>
-          </p>
         </div>
       </div>
     </div>

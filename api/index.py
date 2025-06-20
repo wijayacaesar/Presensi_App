@@ -58,8 +58,8 @@ def get_attendance_status(current_time, action_type='clock_in'):
     current_minutes = hour * 60 + minute
     
     if action_type == 'clock_in':
-        work_start = 8 * 60  # 08:00
-        late_threshold = 8 * 60 + 15  # 08:15
+        work_start = 8 * 60
+        late_threshold = 8 * 60 + 15
         
         if current_minutes < work_start:
             return 'Datang Awal', '🌅'
@@ -67,9 +67,9 @@ def get_attendance_status(current_time, action_type='clock_in'):
             return 'Tepat Waktu', '✅'
         else:
             return 'Terlambat', '⏰'
-    else:  # clock_out
-        work_end = 17 * 60  # 17:00
-        early_threshold = 17 * 60 - 30  # 16:30
+    else:
+        work_end = 17 * 60
+        early_threshold = 17 * 60 - 30
         
         if current_minutes < early_threshold:
             return 'Pulang Awal', '🏃'
@@ -105,7 +105,6 @@ def is_location_valid(user_lat, user_lng):
     return distance <= OFFICE_LOCATION['radius_km']
 
 def calculate_work_hours(clock_in_time, clock_out_time):
-    """Hitung jam kerja dalam format jam:menit"""
     if not clock_in_time or not clock_out_time:
         return "0:00"
     
@@ -113,7 +112,6 @@ def calculate_work_hours(clock_in_time, clock_out_time):
         clock_in = datetime.strptime(clock_in_time, '%H:%M:%S')
         clock_out = datetime.strptime(clock_out_time, '%H:%M:%S')
         
-        # Jika clock out di hari berikutnya
         if clock_out < clock_in:
             clock_out += timedelta(days=1)
         
@@ -158,7 +156,7 @@ def tambah_presensi():
     try:
         nama = request.form.get('nama', '').strip()
         pin = request.form.get('pin', '').strip()
-        action = request.form.get('action', 'clock_in')  # clock_in atau clock_out
+        action = request.form.get('action', 'clock_in')
         keterangan = request.form.get('keterangan', '').strip()
         lokasi = request.form.get('lokasi', '').strip()
         user_lat = request.form.get('latitude', '')
@@ -179,7 +177,6 @@ def tambah_presensi():
         now = datetime.now(WIB)
         today = now.date().strftime('%Y-%m-%d')
         
-        # Cari record presensi hari ini
         existing_record = None
         for record in presensi_data:
             if record['nama'] == nama and record['date'] == today:
@@ -187,7 +184,6 @@ def tambah_presensi():
                 break
         
         if action == 'clock_in':
-            # Clock In Logic
             if existing_record:
                 flash(f'⚠️ {nama} sudah melakukan clock in hari ini pada {existing_record["clock_in"]}!', 'warning')
                 return redirect(url_for('home'))
@@ -224,7 +220,6 @@ def tambah_presensi():
             flash(f'✅ Clock In {nama} berhasil! Status: {status} {icon}', 'success')
             
         else:
-            # Clock Out Logic
             if not existing_record:
                 flash(f'❌ {nama} belum melakukan clock in hari ini!', 'error')
                 return redirect(url_for('home'))
@@ -236,7 +231,6 @@ def tambah_presensi():
             status, icon = get_attendance_status(now, 'clock_out')
             needs_audit = bool(keterangan and keterangan.strip() != '') or existing_record.get('needs_audit', False)
             
-            # Update existing record
             existing_record['clock_out'] = now.strftime('%H:%M:%S')
             existing_record['clock_out_status'] = status
             existing_record['clock_out_icon'] = icon
@@ -314,29 +308,6 @@ def admin_dashboard():
                          status_stats=status_stats,
                          settings=app_settings,
                          admin_username=session.get('admin_username'))
-
-@app.route('/admin/audit/<int:record_id>/<action>')
-@admin_required
-def audit_record(record_id, action):
-    try:
-        record = next((d for d in presensi_data if d['id'] == record_id), None)
-        if record and record.get('needs_audit', False):
-            if action == 'approve':
-                record['audit_status'] = 'Approved'
-                record['audited_by'] = session.get('admin_username')
-                record['audited_at'] = datetime.now(WIB).isoformat()
-                flash(f'✅ Presensi {record["nama"]} telah disetujui!', 'success')
-            elif action == 'reject':
-                record['audit_status'] = 'Rejected'
-                record['audited_by'] = session.get('admin_username')
-                record['audited_at'] = datetime.now(WIB).isoformat()
-                flash(f'❌ Presensi {record["nama"]} ditolak!', 'warning')
-        else:
-            flash('❌ Data tidak ditemukan atau tidak perlu audit!', 'error')
-    except Exception as e:
-        flash('❌ Gagal memproses audit!', 'error')
-    
-    return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/delete/<int:record_id>')
 @admin_required

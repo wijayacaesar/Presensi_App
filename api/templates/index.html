@@ -235,7 +235,9 @@
                   <td><strong>{{ item.nama }}</strong></td>
                   <td>{{ item.clock_in or '-' }}</td>
                   <td>{{ item.clock_out or '-' }}</td>
-                  <td><strong>{{ item.work_hours or '0:00' }}</strong></td>
+                  <td class="work-hours">
+                    <strong>{{ item.work_hours or '0:00' }}</strong>
+                  </td>
                   <td>{{ item.date }}</td>
                   <td>
                     {% if item.clock_in_status %}
